@@ -22,6 +22,11 @@ from portfolio_rl.environment.risk_constraint import RiskConstraint
 from portfolio_rl.environment.transaction_cost_model import TransactionCostModel
 from portfolio_rl.fusion.attention_pooler import AttentionPooler
 from portfolio_rl.fusion.state_builder import AssetSpec, StateBuilder
+from portfolio_rl.training.monte_carlo import (
+    MonteCarloEvaluationConfig,
+    monte_carlo_evaluate,
+    rollout_policy,
+)
 
 
 @dataclass
@@ -46,6 +51,9 @@ class TrainAgentConfig:
     num_episodes: int = 20
     sac_warmup_steps: int = 256
     sac_updates_per_step: int = 1
+    monte_carlo_num_simulations: int = 100
+    monte_carlo_confidence_level: float = 0.95
+    monte_carlo_seed: int = 42
     device: str = "cpu"
 
 
@@ -129,6 +137,15 @@ def run_training(config: TrainAgentConfig) -> Dict[str, object]:
         episode_logs.append(episode_metrics)
 
     evaluation = evaluate_policy(policy, eval_env)
+    monte_carlo_evaluation = monte_carlo_evaluate(
+        policy,
+        eval_env,
+        MonteCarloEvaluationConfig(
+            num_simulations=config.monte_carlo_num_simulations,
+            confidence_level=config.monte_carlo_confidence_level,
+            random_seed=config.monte_carlo_seed,
+        ),
+    )
     checkpoint_path = Path(config.checkpoint_path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(policy.state_dict(), checkpoint_path)
@@ -137,27 +154,21 @@ def run_training(config: TrainAgentConfig) -> Dict[str, object]:
         "checkpoint_path": str(checkpoint_path),
         "episode_logs": episode_logs,
         "evaluation": evaluation,
+        "monte_carlo_evaluation": monte_carlo_evaluation,
     }
 
 
 def evaluate_policy(policy: PPOPolicy | SACPolicy, env: PortfolioEnv) -> Dict[str, float]:
     """Run a deterministic evaluation episode and compute out-of-sample Sharpe."""
-    state, _ = env.reset()
-    done = False
-    daily_returns: List[float] = []
-
-    while not done:
-        if isinstance(policy, PPOPolicy):
-            action, _, _ = policy.act(state, deterministic=True)
-        else:
-            action, _, _ = policy.act(state, deterministic=True)
-        state, _, terminated, truncated, info = env.step(action)
-        done = terminated or truncated
-        daily_returns.append(info["gross_return"] - info["trading_cost"])
-
-    sharpe = _annualized_sharpe(np.asarray(daily_returns, dtype=np.float32))
-    total_return = float(env.portfolio_value / env.config.initial_cash - 1.0)
-    return {"sharpe": sharpe, "total_return": total_return}
+    summary = rollout_policy(policy=policy, env=env, deterministic=True)
+    return {
+        "sharpe": summary["sharpe"],
+        "total_return": summary["total_return"],
+        "annualized_volatility": summary["annualized_volatility"],
+        "max_drawdown": summary["max_drawdown"],
+        "mean_turnover": summary["mean_turnover"],
+        "final_portfolio_value": summary["final_portfolio_value"],
+    }
 
 
 def _run_sac_episode(policy: SACPolicy, env: PortfolioEnv, config: TrainAgentConfig) -> Dict[str, float]:

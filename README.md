@@ -17,7 +17,7 @@ Portfolio RL systems are fragile when data handling, representation learning, an
 - `portfolio_rl/fusion/`: cross-asset aggregation into a policy state.
 - `portfolio_rl/agent/`: policy algorithms and reward definitions.
 - `portfolio_rl/environment/`: Gymnasium environment and portfolio constraints.
-- `portfolio_rl/training/`: encoder pretraining, RL training, and walk-forward evaluation.
+- `portfolio_rl/training/`: encoder pretraining, RL training, walk-forward evaluation, and Monte Carlo robustness analysis.
 
 Each folder contains its own `README.md` with more detail.
 
@@ -54,9 +54,9 @@ The main reward uses log portfolio return and subtracts normalized penalties for
 
 The normalization uses an exponential moving average of absolute term magnitudes so the penalties remain comparable even if one term naturally has a smaller raw numerical scale than another.
 
-### 6. Evaluation is walk-forward, not random split
+### 6. Evaluation is walk-forward and stress-tested with Monte Carlo rollouts
 
-Financial data are time ordered, autocorrelated, and vulnerable to leakage through overlapping labels and transformations. The walk-forward pipeline keeps train, validation, and test periods sequential and includes a purge gap to reduce contamination between phases.
+Financial data are time ordered, autocorrelated, and vulnerable to leakage through overlapping labels and transformations. The walk-forward pipeline keeps train, validation, and test periods sequential and includes a purge gap to reduce contamination between phases. After training, the held-out test environment is also evaluated with repeated stochastic policy rollouts so we can inspect the distribution of outcomes induced by the learned Dirichlet policy rather than relying only on one deterministic backtest path.
 
 ## Practical workflow
 
@@ -67,7 +67,8 @@ Financial data are time ordered, autocorrelated, and vulnerable to leakage throu
 5. Freeze the encoder.
 6. Build environment states from normalized windows, encoded asset latents, attention pooling, and risk metadata.
 7. Train an RL policy with PPO or SAC.
-8. Evaluate out of sample with walk-forward folds.
+8. Evaluate out of sample with deterministic test episodes and walk-forward folds.
+9. Run Monte Carlo rollouts on the held-out environment to estimate robustness ranges for Sharpe, return, drawdown, and turnover.
 
 ## What is intentionally simplified
 
@@ -78,6 +79,7 @@ This package is built as a clear baseline, not a full institutional backtesting 
 - transaction costs are linear in turnover
 - risk projection is approximate and uses projected descent rather than a dedicated convex solver
 - reward penalties are based on realized signals rather than forecast risk models
+- Monte Carlo robustness currently samples alternative policy actions on the same held-out market path rather than generating fully resampled market scenarios
 
 Those choices keep the code dependency-light and readable while preserving the main research ideas.
 

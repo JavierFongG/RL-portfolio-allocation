@@ -32,6 +32,9 @@ class WalkForwardConfig:
     algo: str = "ppo"
     normalizer_window: int = 20
     num_episodes: int = 20
+    monte_carlo_num_simulations: int = 100
+    monte_carlo_confidence_level: float = 0.95
+    monte_carlo_seed: int = 42
     device: str = "cpu"
 
 
@@ -73,9 +76,13 @@ def run_walk_forward(config: WalkForwardConfig) -> List[Dict[str, object]]:
                 normalizer_window=config.normalizer_window,
                 checkpoint_path=str(policy_path),
                 num_episodes=config.num_episodes,
+                monte_carlo_num_simulations=config.monte_carlo_num_simulations,
+                monte_carlo_confidence_level=config.monte_carlo_confidence_level,
+                monte_carlo_seed=config.monte_carlo_seed,
                 device=config.device,
             )
         )
+        mc_summary = training_result["monte_carlo_evaluation"]["summary"]
         results.append(
             {
                 "fold": fold_id,
@@ -87,6 +94,13 @@ def run_walk_forward(config: WalkForwardConfig) -> List[Dict[str, object]]:
                 "test_end": fold["test_end"],
                 "out_of_sample_sharpe": training_result["evaluation"]["sharpe"],
                 "out_of_sample_return": training_result["evaluation"]["total_return"],
+                "monte_carlo_sharpe_mean": mc_summary["sharpe_mean"],
+                "monte_carlo_sharpe_ci_lower": mc_summary["sharpe_ci_lower"],
+                "monte_carlo_sharpe_ci_upper": mc_summary["sharpe_ci_upper"],
+                "monte_carlo_return_mean": mc_summary["return_mean"],
+                "monte_carlo_return_ci_lower": mc_summary["return_ci_lower"],
+                "monte_carlo_return_ci_upper": mc_summary["return_ci_upper"],
+                "monte_carlo_probability_of_loss": mc_summary["probability_of_loss"],
             }
         )
 

@@ -13,6 +13,7 @@ The package is organized around the idea that portfolio RL is not one model but 
 5. How the action space is parameterized under portfolio constraints.
 6. How the objective balances return, risk, turnover, and diversification.
 7. How evaluation avoids look-ahead bias.
+8. How robustness is assessed beyond a single deterministic backtest.
 
 The directory split mirrors those questions directly.
 
@@ -23,11 +24,11 @@ The directory split mirrors those questions directly.
 - `fusion/`: transformation from a set of asset latents into one environment observation.
 - `agent/`: RL policies and reward functions.
 - `environment/`: trading simulator and feasibility constraints.
-- `training/`: experiment entrypoints.
+- `training/`: experiment entrypoints, deterministic evaluation, and Monte Carlo robustness testing.
 
 ## Why modularity matters here
 
-In finance, the largest modeling errors often come from process mistakes rather than model architecture. A monolithic notebook can accidentally mix train and test statistics, refit scalers inside validation, or hide how turnover is penalized. A package architecture forces those assumptions into explicit modules, which makes the pipeline easier to audit and extend.
+In finance, the largest modeling errors often come from process mistakes rather than model architecture. A monolithic notebook can accidentally mix train and test statistics, refit scalers inside validation, hide how turnover is penalized, or report only one lucky evaluation trajectory. A package architecture forces those assumptions into explicit modules, which makes the pipeline easier to audit and extend.
 
 ## Suggested reading order
 

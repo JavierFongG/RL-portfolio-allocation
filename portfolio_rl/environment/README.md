@@ -46,6 +46,8 @@ The risk projection layer exists because a policy can otherwise discover very ag
 
 The `info` dictionary is essential in finance. A reward alone is not enough to diagnose behavior. Logging portfolio value, turnover, gross return, trading cost, and reward terms helps separate “the policy made money” from “the policy overtraded,” “the policy concentrated risk,” or “the policy only performed through one regime.”
 
+This becomes even more important during Monte Carlo robustness evaluation, where the same held-out environment is rolled out multiple times under stochastic policy sampling. The recorded `info` fields make it possible to compare not just terminal performance but the path-level behavior of the policy across simulations.
+
 ## References
 
 - Gymnasium API: https://gymnasium.farama.org/

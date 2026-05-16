@@ -298,7 +298,9 @@ def _fit_normalizers(
 ) -> Dict[str, RollingZScoreNormalizer]:
     normalizers: Dict[str, RollingZScoreNormalizer] = {}
     for asset in asset_specs:
-        frame = aligned_by_ticker[asset.ticker].loc[:, feature_columns]
+        frame = aligned_by_ticker[asset.ticker]
+        frame.columns = frame.columns.droplevel(1)  # drop the ticker level
+        frame.loc[:, feature_columns]
         train_frame = frame.loc[(frame.index >= train_start) & (frame.index <= train_end)]
         normalizers[asset.ticker] = RollingZScoreNormalizer(window_size=window_size).fit(train_frame)
     return normalizers

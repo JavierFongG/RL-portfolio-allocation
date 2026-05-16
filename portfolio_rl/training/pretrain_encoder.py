@@ -57,7 +57,9 @@ def run_pretraining(config: PretrainEncoderConfig) -> Dict[str, object]:
     normalizers: Dict[str, RollingZScoreNormalizer] = {}
 
     for asset in config.asset_specs:
-        frame = aligned_by_ticker[asset.ticker].loc[:, config.feature_columns]
+        frame = aligned_by_ticker[asset.ticker]
+        frame.columns = frame.columns.droplevel(1)  # drop the ticker level
+        frame.loc[:, config.feature_columns]
         train_frame = frame.loc[(frame.index >= train_start) & (frame.index <= train_end)]
         val_frame = frame.loc[(frame.index >= val_start) & (frame.index <= val_end)]
         if len(train_frame) < config.window_size or len(val_frame) < config.window_size:
